@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar & EV Battery Monitor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #007bff;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    main {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 20px;
+    }
+    .card {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      margin: 10px;
+      padding: 20px;
+      flex: 1 1 250px;
+      max-width: 300px;
+    }
+    .card h2 {
+      margin-top: 0;
+      color: #007bff;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 5px 0;
+      font-size: 1.1em;
+    }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBYnldLEsmsAD-P4xkPccZwdngSp0lPk54",
+      authDomain: "solar-ev-battery-check.firebaseapp.com",
+      databaseURL: "https://solar-ev-battery-check-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "solar-ev-battery-check",
+      storageBucket: "solar-ev-battery-check.appspot.com",
+      messagingSenderId: "777984908301",
+      appId: "1:777984908301:web:feafcb933b4cb3637d4944"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dataRef = ref(db, 'SolarEV_Checker');
+
+    onValue(dataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        document.getElementById('battery1').textContent = data.Battery1_Voltage.toFixed(2) + " V";
+        document.getElementById('battery2').textContent = data.Battery2_Voltage.toFixed(2) + " V";
+        document.getElementById('battery3').textContent = data.Battery3_Voltage.toFixed(2) + " V";
+        document.getElementById('pv').textContent = data.PV_Voltage.toFixed(2) + " V";
+        document.getElementById('temperature').textContent = data.Temperature_C.toFixed(1) + " °C";
+        document.getElementById('ldr').textContent = data.LDR_Percent.toFixed(1) + " %";
+        document.getElementById('timestamp').textContent = new Date(data.Timestamp * 1000).toLocaleString();
+      }
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Solar & EV Battery Monitor</h1>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Batteries</h2>
+      <ul>
+        <li>Battery 1: <span id="battery1">--</span></li>
+        <li>Battery 2: <span id="battery2">--</span></li>
+        <li>Battery 3: <span id="battery3">--</span></li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>PV Panel</h2>
+      <ul>
+        <li>Voltage: <span id="pv">--</span></li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Environment</h2>
+      <ul>
+        <li>Temperature: <span id="temperature">--</span></li>
+        <li>Sunlight (LDR %): <span id="ldr">--</span></li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Last Updated</h2>
+      <p id="timestamp">--</p>
+    </section>
+  </main>
+</body>
+</html>
