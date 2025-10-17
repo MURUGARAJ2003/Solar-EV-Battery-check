@@ -263,6 +263,12 @@
       box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
     }
 
+    .btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
     .timestamp {
       text-align: center;
       margin-top: 1rem;
@@ -270,6 +276,21 @@
       border-top: 1px solid #e2e8f0;
       color: var(--gray);
       font-size: 0.9rem;
+    }
+
+    .data-status {
+      text-align: center;
+      margin: 1rem 0;
+      padding: 0.75rem;
+      border-radius: 8px;
+      background-color: #fef3c7;
+      color: #92400e;
+      font-weight: 500;
+    }
+
+    .data-status.connected {
+      background-color: #d1fae5;
+      color: #065f46;
     }
 
     footer {
@@ -316,6 +337,17 @@
   </header>
 
   <main>
+    <!-- Data Status Indicator -->
+    <section class="card" style="grid-column: 1 / -1;">
+      <div class="card-header">
+        <i class="fas fa-database"></i>
+        <h2>Data Status</h2>
+      </div>
+      <div class="data-status" id="dataStatus">
+        <i class="fas fa-sync fa-spin"></i> Connecting to data source...
+      </div>
+    </section>
+
     <!-- Battery 1 -->
     <section class="card">
       <div class="card-header">
@@ -458,11 +490,11 @@
       </div>
       <p>Generate detailed reports for battery status and PV panel performance.</p>
       <div class="button-group">
-        <button class="btn btn-primary" id="batteryReportBtn">
+        <button class="btn btn-primary" id="batteryReportBtn" disabled>
           <i class="fas fa-download"></i>
           Battery Status Report
         </button>
-        <button class="btn btn-success" id="pvReportBtn">
+        <button class="btn btn-success" id="pvReportBtn" disabled>
           <i class="fas fa-download"></i>
           PV Performance Report
         </button>
@@ -497,7 +529,8 @@
     const dataRef = ref(db, 'SolarEV_Checker');
 
     // Store current data for reports
-    let currentData = {};
+    let currentData = null;
+    let hasData = false;
 
     // Map battery voltages to status
     function batteryStatus(voltage) {
@@ -541,8 +574,8 @@
 
     // Generate battery report
     function generateBatteryReport() {
-      if (!currentData.Battery1_Voltage) {
-        alert('No data available for report generation');
+      if (!hasData || !currentData) {
+        alert('No data available for report generation. Please wait for data to load.');
         return;
       }
       
@@ -581,8 +614,8 @@ End of Report`;
 
     // Generate PV report
     function generatePVReport() {
-      if (!currentData.PV_Voltage) {
-        alert('No data available for report generation');
+      if (!hasData || !currentData) {
+        alert('No data available for report generation. Please wait for data to load.');
         return;
       }
       
@@ -672,15 +705,47 @@ End of Report`;
       return 'Low sunlight. Consider alternative charging sources if available.';
     }
 
+    // Update data status indicator
+    function updateDataStatus(connected, hasData) {
+      const statusEl = document.getElementById('dataStatus');
+      
+      if (!connected) {
+        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Disconnected from data source';
+        statusEl.className = 'data-status';
+        return;
+      }
+      
+      if (hasData) {
+        statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Data connected and updated';
+        statusEl.className = 'data-status connected';
+        
+        // Enable report buttons
+        document.getElementById('batteryReportBtn').disabled = false;
+        document.getElementById('pvReportBtn').disabled = false;
+      } else {
+        statusEl.innerHTML = '<i class="fas fa-sync fa-spin"></i> Connected, waiting for data...';
+        statusEl.className = 'data-status';
+        
+        // Keep buttons disabled
+        document.getElementById('batteryReportBtn').disabled = true;
+        document.getElementById('pvReportBtn').disabled = true;
+      }
+    }
+
     // Set up event listeners for report buttons
     document.getElementById('batteryReportBtn').addEventListener('click', generateBatteryReport);
     document.getElementById('pvReportBtn').addEventListener('click', generatePVReport);
+
+    // Initial data status
+    updateDataStatus(false, false);
 
     // Listen for Firebase data changes
     onValue(dataRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         currentData = data;
+        hasData = true;
+        updateDataStatus(true, true);
         
         // Update battery information
         const batteries = [
@@ -706,7 +771,13 @@ End of Report`;
         
         // Update timestamp
         document.getElementById('timestamp').textContent = new Date(data.Timestamp * 1000).toLocaleString();
+      } else {
+        hasData = false;
+        updateDataStatus(true, false);
       }
+    }, (error) => {
+      console.error('Firebase connection error:', error);
+      updateDataStatus(false, false);
     });
   </script>
 </body>
