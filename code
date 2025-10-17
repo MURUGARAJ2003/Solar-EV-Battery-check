@@ -1,0 +1,185 @@
+/* 
+  Old Solar & EV Battery Condition Checking System (ESP32)
+  --------------------------------------------------------
+  - Voltage dividers on pins 34, 35, 32 (batteries) and 33 (PV)
+  - DS18B20 on D4
+  - LDR on A25
+  - Rtop = 1k, Rbottom = 2k -> Vin = Vout * 1.5
+*/
+
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// === Pin Definitions ===
+const int VIN_PIN_BATT1 = 34;
+const int VIN_PIN_BATT2 = 35;
+const int VIN_PIN_BATT3 = 32;
+const int VIN_PIN_PV    = 33;
+const int LDR_PIN       = 25;
+const int DS18B20_PIN   = 4;
+
+// === Voltage Divider Constants ===
+const float VIN_SCALE = 2.4; // R1=1k, R2=2k
+
+// === ADC Configuration ===
+const int   ADC_BITS    = 12;
+const int   ADC_MAX     = (1 << ADC_BITS) - 1; // 4095
+const float ADC_CAL_REF = 3.9;  // Calibrated reference for 11dB attenuation (~3.9V)
+const float ADC_CORRECT = 1.08; // fine-tune (increase if reading low)
+
+// === Temperature Sensor Setup ===
+OneWire oneWire(DS18B20_PIN);
+DallasTemperature sensors(&oneWire);
+
+// === PV Temperature Coefficient ===
+const float PV_TEMP_COEFF = -0.003; // -0.3% per °C
+float nominal_pv_voc = 6.0; // nominal open-circuit voltage of small PV panel
+
+// === Battery Type & Thresholds ===
+enum BatteryType { BAT_LI_1S, BAT_LEAD_12V, BAT_GENERIC };
+BatteryType battType[3] = { BAT_LI_1S, BAT_LI_1S, BAT_LI_1S };
+
+struct BattStatus {
+  float voltage;
+  const char* status;
+};
+
+// === Function Prototypes ===
+void setupADC();
+float readPinVoltageRaw(int pin);
+float readActualVin(int pin);
+float readLDRpercent(int ldrPin);
+float readTemperatureC();
+BattStatus evaluateBattery(float volts, BatteryType type);
+float estimatePVvoc(float measuredPV, float tempC, float ldrPercent);
+
+// === Setup ===
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+  Serial.println("\n=== Old Solar & EV Battery Condition Checking System ===");
+
+  setupADC();
+  sensors.begin();
+  Serial.println("Sensors initialized successfully.\n");
+}
+
+// === Main Loop ===
+void loop() {
+  // Read sensors
+  float tempC = readTemperatureC();
+  float ldrPercent = readLDRpercent(LDR_PIN);
+
+  float vb1 = readActualVin(VIN_PIN_BATT1);
+  float vb2 = readActualVin(VIN_PIN_BATT2);
+  float vb3 = readActualVin(VIN_PIN_BATT3);
+  float pv  = readActualVin(VIN_PIN_PV);
+
+  // Evaluate batteries
+  BattStatus s1 = evaluateBattery(vb1, battType[0]);
+  BattStatus s2 = evaluateBattery(vb2, battType[1]);
+  BattStatus s3 = evaluateBattery(vb3, battType[2]);
+
+  // Estimate PV expected voltage
+  float expectedVoc = estimatePVvoc(nominal_pv_voc, tempC, ldrPercent);
+
+  // === Display Results ===
+  Serial.println("------------------------------------------------");
+  Serial.printf("Temperature: %.2f °C | LDR: %.1f %%\n", tempC, ldrPercent);
+  Serial.printf("Battery1 (pin %d): %.3f V -> %s\n", VIN_PIN_BATT1, vb1, s1.status);
+  Serial.printf("Battery2 (pin %d): %.3f V -> %s\n", VIN_PIN_BATT2, vb2, s2.status);
+  Serial.printf("Battery3 (pin %d): %.3f V -> %s\n", VIN_PIN_BATT3, vb3, s3.status);
+  Serial.printf("PV measured (pin %d): %.3f V | Expected Voc = %.3f V\n", VIN_PIN_PV, pv, expectedVoc);
+
+  // PV Fault Check
+  if (pv < expectedVoc - 1.0)
+    Serial.println("⚠️ PV Check: Voltage LOWER than expected → Possible shading or weak sun.");
+  else if (pv > expectedVoc + 1.0)
+    Serial.println("⚠️ PV Check: Voltage HIGHER than expected → Verify calibration or load.");
+  else
+    Serial.println("✅ PV Check: Within expected range.");
+
+  delay(3000);
+}
+
+// === Functions ===
+
+// ADC setup for 11dB attenuation
+void setupADC() {
+  analogReadResolution(ADC_BITS);
+  analogSetPinAttenuation(VIN_PIN_BATT1, ADC_11db);
+  analogSetPinAttenuation(VIN_PIN_BATT2, ADC_11db);
+  analogSetPinAttenuation(VIN_PIN_BATT3, ADC_11db);
+  analogSetPinAttenuation(VIN_PIN_PV, ADC_11db);
+  analogSetPinAttenuation(LDR_PIN, ADC_11db);
+}
+
+// Read ADC pin (raw voltage)
+float readPinVoltageRaw(int pin) {
+  int raw = analogRead(pin);
+  float vout = ((float)raw / (float)ADC_MAX) * ADC_CAL_REF;
+  return vout;
+}
+
+// Convert ADC to actual input voltage (with calibration)
+float readActualVin(int pin) {
+  float vout = readPinVoltageRaw(pin);
+  float vin = vout * VIN_SCALE * ADC_CORRECT;
+  return vin;
+}
+
+
+// LDR → approximate irradiance percentage (Active-Low model)
+float readLDRpercent(int ldrPin) {
+  int raw = analogRead(ldrPin);
+  float frac = 1.0 - ((float)raw / (float)ADC_MAX);  // invert for active-low
+  float percent = frac * 100.0;
+  if (percent < 0) percent = 0;
+  if (percent > 100) percent = 100;
+  return percent;
+}
+
+
+// DS18B20 temperature
+float readTemperatureC() {
+  sensors.requestTemperatures();
+  float t = sensors.getTempCByIndex(0);
+  if (t == DEVICE_DISCONNECTED_C) {
+    Serial.println("⚠️ DS18B20 not detected!");
+    return NAN;
+  }
+  return t;
+}
+
+// Battery evaluation
+BattStatus evaluateBattery(float volts, BatteryType type) {
+  BattStatus bs;
+  bs.voltage = volts;
+  if (type == BAT_LI_1S) {
+    if (volts >= 4.0)      bs.status = "Li-ion: Full";
+    else if (volts >= 3.6) bs.status = "Li-ion: OK";
+    else if (volts >= 3.3) bs.status = "Li-ion: Low";
+    else                   bs.status = "Li-ion: Replace";
+  } 
+  else if (type == BAT_LEAD_12V) {
+    if (volts >= 12.6)      bs.status = "Lead-Acid: Full";
+    else if (volts >= 12.0) bs.status = "Lead-Acid: Fair";
+    else if (volts >= 11.6) bs.status = "Lead-Acid: Low";
+    else                    bs.status = "Lead-Acid: Replace";
+  } 
+  else {
+    if (volts >= 12.0)      bs.status = "Generic: Good";
+    else if (volts >= 10.5) bs.status = "Generic: Fair";
+    else                    bs.status = "Generic: Bad";
+  }
+  return bs;
+}
+
+// PV expected voltage (based on LDR + temperature)
+float estimatePVvoc(float nominalVoc, float tempC, float ldrPercent) {
+  if (isnan(tempC)) tempC = 25.0;
+  float tempFactor = 1.0 + PV_TEMP_COEFF * (tempC - 25.0);
+  float irrFactor  = 0.90 + (ldrPercent / 100.0) * 0.12;
+  float voc_est = nominalVoc * tempFactor * irrFactor;
+  return voc_est;
+}
