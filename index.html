@@ -3,72 +3,480 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solar & EV Battery Dashboard</title>
+  <title>Solar & EV Battery Monitoring System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f6f8;
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --light: #f8fafc;
+      --dark: #1e293b;
+      --gray: #64748b;
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    * {
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      color: var(--dark);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
     header {
-      background-color: #007bff;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    main {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin: 20px;
-    }
-    .card {
-      background-color: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      margin: 10px;
-      padding: 20px;
-      flex: 1 1 250px;
-      max-width: 320px;
-      text-align: center;
-    }
-    .card h2 {
-      margin-top: 0;
-      color: #007bff;
-    }
-    .gauge {
-      width: 120px;
-      height: 120px;
-      margin: 10px auto;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       position: relative;
-      border-radius: 50%;
-      background: conic-gradient(green 0% 50%, yellow 50% 75%, red 75% 100%);
+      overflow: hidden;
     }
-    .gauge-value {
+
+    header::before {
+      content: '';
       position: absolute;
+      top: 0;
+      right: 0;
+      width: 150px;
+      height: 150px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      transform: translate(30%, -30%);
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 1rem;
+    }
+
+    .header-icons {
+      position: absolute;
+      right: 2rem;
       top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 1.2em;
-      font-weight: bold;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 1rem;
     }
-    .label {
-      margin-top: 10px;
-      font-weight: bold;
+
+    .header-icons i {
+      font-size: 1.5rem;
+      opacity: 0.8;
     }
+
+    main {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      padding: 1.5rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .card-header i {
+      font-size: 1.5rem;
+      color: var(--primary);
+      margin-right: 0.75rem;
+    }
+
+    .card-header h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .gauge-container {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .gauge {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    .gauge-fill {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      clip: rect(0, 160px, 160px, 80px);
+    }
+
+    .gauge-cover {
+      position: absolute;
+      width: 130px;
+      height: 130px;
+      background: white;
+      border-radius: 50%;
+      top: 15px;
+      left: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .gauge-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .gauge-label {
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin-top: 0.25rem;
+    }
+
     .status {
-      font-weight: bold;
-      padding: 4px 8px;
-      border-radius: 4px;
-      color: white;
-      margin-top: 6px;
       display: inline-block;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    .good { background-color: green; }
-    .fair { background-color: orange; }
-    .low  { background-color: red; }
+
+    .good { background-color: var(--success); color: white; }
+    .fair { background-color: var(--warning); color: white; }
+    .low { background-color: var(--danger); color: white; }
+
+    .battery-details {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1rem;
+    }
+
+    .battery-detail {
+      text-align: center;
+    }
+
+    .battery-detail .value {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .battery-detail .label {
+      font-size: 0.8rem;
+      color: var(--gray);
+    }
+
+    .environment-list {
+      list-style: none;
+    }
+
+    .environment-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .environment-list li:last-child {
+      border-bottom: none;
+    }
+
+    .report-card {
+      grid-column: 1 / -1;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+      color: white;
+    }
+
+    .btn-success:hover {
+      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+    }
+
+    .timestamp {
+      text-align: center;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+      color: var(--gray);
+      font-size: 0.9rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--gray);
+      font-size: 0.9rem;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      header {
+        padding: 1.5rem 1rem;
+      }
+      
+      .header-icons {
+        position: static;
+        transform: none;
+        justify-content: center;
+        margin-top: 1rem;
+      }
+    }
   </style>
+</head>
+<body>
+  <header>
+    <h1>Solar & EV Battery Monitoring System</h1>
+    <p>Real-time monitoring of battery health and solar panel performance</p>
+    <div class="header-icons">
+      <i class="fas fa-sun"></i>
+      <i class="fas fa-bolt"></i>
+      <i class="fas fa-car-battery"></i>
+    </div>
+  </header>
+
+  <main>
+    <!-- Battery 1 -->
+    <section class="card">
+      <div class="card-header">
+        <i class="fas fa-car-battery"></i>
+        <h2>Battery 1</h2>
+      </div>
+      <div class="gauge-container">
+        <div class="gauge">
+          <div class="gauge-fill" id="battery1-fill"></div>
+        </div>
+        <div class="gauge-cover">
+          <div class="gauge-value" id="battery1-value">--</div>
+          <div class="gauge-label">Voltage</div>
+        </div>
+      </div>
+      <div class="battery-details">
+        <div class="battery-detail">
+          <div class="value" id="battery1-percent">--</div>
+          <div class="label">Capacity</div>
+        </div>
+        <div class="battery-detail">
+          <div class="status" id="status1">--</div>
+          <div class="label">Status</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Battery 2 -->
+    <section class="card">
+      <div class="card-header">
+        <i class="fas fa-car-battery"></i>
+        <h2>Battery 2</h2>
+      </div>
+      <div class="gauge-container">
+        <div class="gauge">
+          <div class="gauge-fill" id="battery2-fill"></div>
+        </div>
+        <div class="gauge-cover">
+          <div class="gauge-value" id="battery2-value">--</div>
+          <div class="gauge-label">Voltage</div>
+        </div>
+      </div>
+      <div class="battery-details">
+        <div class="battery-detail">
+          <div class="value" id="battery2-percent">--</div>
+          <div class="label">Capacity</div>
+        </div>
+        <div class="battery-detail">
+          <div class="status" id="status2">--</div>
+          <div class="label">Status</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Battery 3 -->
+    <section class="card">
+      <div class="card-header">
+        <i class="fas fa-car-battery"></i>
+        <h2>Battery 3</h2>
+      </div>
+      <div class="gauge-container">
+        <div class="gauge">
+          <div class="gauge-fill" id="battery3-fill"></div>
+        </div>
+        <div class="gauge-cover">
+          <div class="gauge-value" id="battery3-value">--</div>
+          <div class="gauge-label">Voltage</div>
+        </div>
+      </div>
+      <div class="battery-details">
+        <div class="battery-detail">
+          <div class="value" id="battery3-percent">--</div>
+          <div class="label">Capacity</div>
+        </div>
+        <div class="battery-detail">
+          <div class="status" id="status3">--</div>
+          <div class="label">Status</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PV Panel -->
+    <section class="card">
+      <div class="card-header">
+        <i class="fas fa-solar-panel"></i>
+        <h2>PV Panel</h2>
+      </div>
+      <div class="gauge-container">
+        <div class="gauge">
+          <div class="gauge-fill" id="pv-fill"></div>
+        </div>
+        <div class="gauge-cover">
+          <div class="gauge-value" id="pv-value">--</div>
+          <div class="gauge-label">Voltage</div>
+        </div>
+      </div>
+      <div class="battery-details">
+        <div class="battery-detail">
+          <div class="value" id="pv-power">--</div>
+          <div class="label">Power Output</div>
+        </div>
+        <div class="battery-detail">
+          <div class="value" id="pv-efficiency">--</div>
+          <div class="label">Efficiency</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Environment -->
+    <section class="card">
+      <div class="card-header">
+        <i class="fas fa-temperature-high"></i>
+        <h2>Environment</h2>
+      </div>
+      <ul class="environment-list">
+        <li>
+          <span>Temperature</span>
+          <span id="temperature">-- °C</span>
+        </li>
+        <li>
+          <span>Sunlight (LDR %)</span>
+          <span id="ldr">-- %</span>
+        </li>
+        <li>
+          <span>Humidity</span>
+          <span>45%</span>
+        </li>
+        <li>
+          <span>Weather</span>
+          <span>Sunny</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Reports -->
+    <section class="card report-card">
+      <div class="card-header">
+        <i class="fas fa-file-alt"></i>
+        <h2>System Reports</h2>
+      </div>
+      <p>Generate detailed reports for battery status and PV panel performance.</p>
+      <div class="button-group">
+        <button class="btn btn-primary" id="batteryReportBtn">
+          <i class="fas fa-download"></i>
+          Battery Status Report
+        </button>
+        <button class="btn btn-success" id="pvReportBtn">
+          <i class="fas fa-download"></i>
+          PV Performance Report
+        </button>
+      </div>
+      <div class="timestamp">
+        Last Updated: <span id="timestamp">--</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Solar & EV Battery Monitoring System &copy; 2023 | Real-time Dashboard</p>
+  </footer>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
@@ -88,6 +496,9 @@
     const db = getDatabase(app);
     const dataRef = ref(db, 'SolarEV_Checker');
 
+    // Store current data for reports
+    let currentData = {};
+
     // Map battery voltages to status
     function batteryStatus(voltage) {
       if (voltage >= 4.0) return {status:"Full", class:"good"};
@@ -95,96 +506,208 @@
       else return {status:"Low", class:"low"};
     }
 
-    onValue(dataRef, (snapshot) => {
-      const data = snapshot.val();
-      if(data){
-        // Batteries
-        const b1 = data.Battery1_Voltage;
-        const b2 = data.Battery2_Voltage;
-        const b3 = data.Battery3_Voltage;
-
-        updateGauge('battery1', b1);
-        updateGauge('battery2', b2);
-        updateGauge('battery3', b3);
-
-        updateStatus('status1', batteryStatus(b1));
-        updateStatus('status2', batteryStatus(b2));
-        updateStatus('status3', batteryStatus(b3));
-
-        // PV
-        const pv = data.PV_Voltage;
-        updateGauge('pv', pv, 6.0); // max PV ~6V
-
-        // Temperature & LDR
-        document.getElementById('temperature').textContent = data.Temperature_C.toFixed(1) + " °C";
-        document.getElementById('ldr').textContent = data.LDR_Percent.toFixed(1) + " %";
-
-        // Timestamp
-        document.getElementById('timestamp').textContent = new Date(data.Timestamp * 1000).toLocaleString();
-      }
-    });
-
-    function updateGauge(id, value, max=4.2){
-      const gauge = document.getElementById(id);
-      const percent = Math.min((value/max)*100, 100);
-      gauge.style.background = `conic-gradient(green 0% ${percent}%, #ddd ${percent}% 100%)`;
-      gauge.querySelector('.gauge-value').textContent = value.toFixed(2) + " V";
+    // Calculate battery percentage based on voltage
+    function batteryPercentage(voltage) {
+      // Simple linear approximation for Li-ion battery
+      const minVoltage = 3.2;
+      const maxVoltage = 4.2;
+      return Math.min(100, Math.max(0, Math.round(((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100)));
     }
 
-    function updateStatus(id, stat){
+    // Update gauge visualization
+    function updateGauge(id, value, max=4.2) {
+      const gaugeFill = document.getElementById(`${id}-fill`);
+      const gaugeValue = document.getElementById(`${id}-value`);
+      const percent = Math.min((value/max)*100, 100);
+      
+      // Set the fill color based on percentage
+      let color;
+      if (percent >= 75) color = '#10b981'; // Green
+      else if (percent >= 25) color = '#f59e0b'; // Yellow
+      else color = '#ef4444'; // Red
+      
+      gaugeFill.style.background = `conic-gradient(${color} 0% ${percent}%, #e2e8f0 ${percent}% 100%)`;
+      gaugeValue.textContent = value.toFixed(2) + " V";
+      
+      return percent;
+    }
+
+    // Update status display
+    function updateStatus(id, stat) {
       const el = document.getElementById(id);
       el.textContent = stat.status;
       el.className = 'status ' + stat.class;
     }
+
+    // Generate battery report
+    function generateBatteryReport() {
+      if (!currentData.Battery1_Voltage) {
+        alert('No data available for report generation');
+        return;
+      }
+      
+      const reportContent = `SOLAR & EV BATTERY MONITORING SYSTEM - BATTERY STATUS REPORT
+Generated: ${new Date().toLocaleString()}
+========================================================
+
+BATTERY 1:
+  Voltage: ${currentData.Battery1_Voltage.toFixed(2)} V
+  Status: ${batteryStatus(currentData.Battery1_Voltage).status}
+  Capacity: ${batteryPercentage(currentData.Battery1_Voltage)}%
+
+BATTERY 2:
+  Voltage: ${currentData.Battery2_Voltage.toFixed(2)} V
+  Status: ${batteryStatus(currentData.Battery2_Voltage).status}
+  Capacity: ${batteryPercentage(currentData.Battery2_Voltage)}%
+
+BATTERY 3:
+  Voltage: ${currentData.Battery3_Voltage.toFixed(2)} V
+  Status: ${batteryStatus(currentData.Battery3_Voltage).status}
+  Capacity: ${batteryPercentage(currentData.Battery3_Voltage)}%
+
+ENVIRONMENTAL DATA:
+  Temperature: ${currentData.Temperature_C.toFixed(1)} °C
+  Sunlight (LDR): ${currentData.LDR_Percent.toFixed(1)} %
+
+SYSTEM SUMMARY:
+  Overall Battery Health: ${getOverallBatteryHealth()}
+  Recommended Actions: ${getRecommendedActions()}
+
+========================================================
+End of Report`;
+
+      downloadReport(reportContent, 'battery-status-report.txt');
+    }
+
+    // Generate PV report
+    function generatePVReport() {
+      if (!currentData.PV_Voltage) {
+        alert('No data available for report generation');
+        return;
+      }
+      
+      const reportContent = `SOLAR & EV BATTERY MONITORING SYSTEM - PV PERFORMANCE REPORT
+Generated: ${new Date().toLocaleString()}
+========================================================
+
+PV PANEL DATA:
+  Voltage: ${currentData.PV_Voltage.toFixed(2)} V
+  Estimated Power Output: ${(currentData.PV_Voltage * 2.5).toFixed(2)} W
+  Efficiency: ${(currentData.PV_Voltage / 6 * 100).toFixed(1)}%
+
+ENVIRONMENTAL CONDITIONS:
+  Temperature: ${currentData.Temperature_C.toFixed(1)} °C
+  Sunlight (LDR): ${currentData.LDR_Percent.toFixed(1)} %
+  Weather Condition: Sunny
+
+PERFORMANCE ANALYSIS:
+  ${getPVAnalysis()}
+
+RECOMMENDATIONS:
+  ${getPVRecommendations()}
+
+========================================================
+End of Report`;
+
+      downloadReport(reportContent, 'pv-performance-report.txt');
+    }
+
+    // Helper function to download reports
+    function downloadReport(content, filename) {
+      const element = document.createElement('a');
+      const file = new Blob([content], {type: 'text/plain'});
+      element.href = URL.createObjectURL(file);
+      element.download = filename;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    }
+
+    // Helper functions for report content
+    function getOverallBatteryHealth() {
+      const batteries = [
+        currentData.Battery1_Voltage,
+        currentData.Battery2_Voltage,
+        currentData.Battery3_Voltage
+      ];
+      
+      const avgVoltage = batteries.reduce((a, b) => a + b, 0) / batteries.length;
+      
+      if (avgVoltage >= 3.9) return 'Excellent';
+      if (avgVoltage >= 3.7) return 'Good';
+      if (avgVoltage >= 3.5) return 'Fair';
+      return 'Poor';
+    }
+
+    function getRecommendedActions() {
+      const batteries = [
+        currentData.Battery1_Voltage,
+        currentData.Battery2_Voltage,
+        currentData.Battery3_Voltage
+      ];
+      
+      const lowBatteries = batteries.filter(v => v < 3.6).length;
+      
+      if (lowBatteries === 0) return 'No action needed. System operating normally.';
+      if (lowBatteries === 1) return 'Consider charging the low battery.';
+      if (lowBatteries === 2) return 'Charge the low batteries soon.';
+      return 'Charge all batteries immediately.';
+    }
+
+    function getPVAnalysis() {
+      const pvEfficiency = (currentData.PV_Voltage / 6 * 100);
+      
+      if (pvEfficiency >= 80) return 'PV panel is performing at optimal levels.';
+      if (pvEfficiency >= 60) return 'PV panel performance is good.';
+      if (pvEfficiency >= 40) return 'PV panel performance is moderate.';
+      return 'PV panel performance is below expected levels. Check for obstructions or damage.';
+    }
+
+    function getPVRecommendations() {
+      const ldr = currentData.LDR_Percent;
+      
+      if (ldr >= 80) return 'Excellent sunlight conditions. Consider increasing charging rate if possible.';
+      if (ldr >= 60) return 'Good sunlight conditions. System operating efficiently.';
+      if (ldr >= 40) return 'Moderate sunlight. Monitor battery levels.';
+      return 'Low sunlight. Consider alternative charging sources if available.';
+    }
+
+    // Set up event listeners for report buttons
+    document.getElementById('batteryReportBtn').addEventListener('click', generateBatteryReport);
+    document.getElementById('pvReportBtn').addEventListener('click', generatePVReport);
+
+    // Listen for Firebase data changes
+    onValue(dataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        currentData = data;
+        
+        // Update battery information
+        const batteries = [
+          { id: 'battery1', voltage: data.Battery1_Voltage },
+          { id: 'battery2', voltage: data.Battery2_Voltage },
+          { id: 'battery3', voltage: data.Battery3_Voltage }
+        ];
+        
+        batteries.forEach(battery => {
+          const percent = updateGauge(battery.id, battery.voltage);
+          document.getElementById(`${battery.id}-percent`).textContent = `${percent}%`;
+          updateStatus(`status${battery.id.slice(-1)}`, batteryStatus(battery.voltage));
+        });
+        
+        // Update PV information
+        const pvPercent = updateGauge('pv', data.PV_Voltage, 6.0);
+        document.getElementById('pv-power').textContent = `${(data.PV_Voltage * 2.5).toFixed(2)} W`;
+        document.getElementById('pv-efficiency').textContent = `${pvPercent.toFixed(1)}%`;
+        
+        // Update environment information
+        document.getElementById('temperature').textContent = `${data.Temperature_C.toFixed(1)} °C`;
+        document.getElementById('ldr').textContent = `${data.LDR_Percent.toFixed(1)} %`;
+        
+        // Update timestamp
+        document.getElementById('timestamp').textContent = new Date(data.Timestamp * 1000).toLocaleString();
+      }
+    });
   </script>
-</head>
-<body>
-  <header>
-    <h1>Solar & EV Battery Dashboard</h1>
-  </header>
-
-  <main>
-    <!-- Battery 1 -->
-    <section class="card">
-      <h2>Battery 1</h2>
-      <div class="gauge" id="battery1"><div class="gauge-value">--</div></div>
-      <div id="status1" class="status">--</div>
-    </section>
-
-    <!-- Battery 2 -->
-    <section class="card">
-      <h2>Battery 2</h2>
-      <div class="gauge" id="battery2"><div class="gauge-value">--</div></div>
-      <div id="status2" class="status">--</div>
-    </section>
-
-    <!-- Battery 3 -->
-    <section class="card">
-      <h2>Battery 3</h2>
-      <div class="gauge" id="battery3"><div class="gauge-value">--</div></div>
-      <div id="status3" class="status">--</div>
-    </section>
-
-    <!-- PV -->
-    <section class="card">
-      <h2>PV Panel</h2>
-      <div class="gauge" id="pv"><div class="gauge-value">--</div></div>
-    </section>
-
-    <!-- Environment -->
-    <section class="card">
-      <h2>Environment</h2>
-      <ul>
-        <li>Temperature: <span id="temperature">--</span></li>
-        <li>Sunlight (LDR %): <span id="ldr">--</span></li>
-      </ul>
-    </section>
-
-    <!-- Last Updated -->
-    <section class="card">
-      <h2>Last Updated</h2>
-      <p id="timestamp">--</p>
-    </section>
-  </main>
 </body>
 </html>
